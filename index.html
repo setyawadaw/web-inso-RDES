@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>RDES Trainer</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Sans+Condensed:wght@500;600&display=swap">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main class="wrap">
+  <header class="mast">
+    <h1>RDES Trainer</h1>
+    <p>A source-driven reactor behind an instrument panel. Pick a configuration, press START, turn the rod knob and read the count rate.</p>
+  </header>
+
+  <div class="bench">
+    <section class="device" aria-label="Instrument front panel">
+      <div class="bezel">
+        <div class="screen" id="screen">
+          <div class="scr-head">
+            <span id="scrPreset">INSO 2026</span>
+            <span class="scr-head-right">
+              <span class="badge" id="scrAccel" hidden>x1</span>
+              <span id="scrStep">FINE</span>
+            </span>
+          </div>
+
+          <div class="view view-numbers" id="viewNumbers">
+            <div class="rows">
+              <div class="row"><span class="k">CONFIG</span><span class="v" id="vConfig">-</span></div>
+              <div class="row"><span class="k">TARGET</span><span class="v" id="vTarget">0.000</span></div>
+              <div class="row"><span class="k">ACTUAL</span><span class="v" id="vActual">0.000</span></div>
+              <div class="row row-cps"><span class="k">DETECTOR CPS</span><span class="v" id="vCps">0</span></div>
+              <div class="row"><span class="k">COOLANT TEMP</span><span class="v" id="vTemp">20.0 °C</span></div>
+              <div class="row"><span class="k">TIME</span><span class="v" id="vTime">0:00</span></div>
+            </div>
+            <div class="statusbox" id="statusBox" data-st="IDLE">
+              <span class="k">STATUS</span>
+              <span class="st" id="vStatus">IDLE</span>
+              <span class="note" id="vNote">SELECT CONFIG</span>
+            </div>
+          </div>
+
+          <div class="view view-graph" id="viewGraph" hidden>
+            <div class="strip">
+              <span><i class="sw sw-cps"></i>CPS <b id="gCps">0</b></span>
+              <span><i class="sw sw-rod"></i>ROD <b id="gActual">0.000</b></span>
+              <span>TIME <b id="gTime">0:00</b></span>
+              <span class="st" id="gStatus" data-st="IDLE">IDLE</span>
+            </div>
+            <div class="canvas-box"><canvas id="graph" aria-label="Count rate and rod position over the last 448 seconds"></canvas></div>
+          </div>
+
+          <div class="view view-instr" id="viewInstr" hidden>
+            <div class="strip">
+              <span>CPS <b id="iCps">0</b></span>
+              <span>ROD <b id="iActual">0.000</b></span>
+              <span>TIME <b id="iTime">0:00</b></span>
+              <span class="st" id="iStatus" data-st="IDLE">IDLE</span>
+            </div>
+            <div class="instr-grid">
+              <dl class="kv">
+                <div><dt>N / N0</dt><dd id="iN">-</dd></div>
+                <div><dt>Reactivity</dt><dd id="iRho">-</dd></div>
+                <div><dt>k effective</dt><dd id="iK">-</dd></div>
+                <div><dt>Period now</dt><dd id="iPer">-</dd></div>
+                <div><dt>Stable period</dt><dd id="iPerInf">-</dd></div>
+                <div><dt>Startup rate</dt><dd id="iSur">-</dd></div>
+                <div><dt>Mean count rate</dt><dd id="iMean">-</dd></div>
+                <div><dt>Shutdown bank</dt><dd id="iBank">-</dd></div>
+              </dl>
+              <div class="preset-info">
+                <div class="pline" id="iDet">-</div>
+                <table class="ptable" id="iCfgTable">
+                  <thead><tr><th>Cfg</th><th>x_c</th><th>W_sub</th><th>W_sup</th><th>alpha</th></tr></thead>
+                  <tbody></tbody>
+                </table>
+                <div class="pline" id="iCool">-</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="controls">
+        <div class="ctl-group" role="group" aria-label="Configuration">
+          <div class="ctl"><span class="led" id="led0"></span><button type="button" class="pb" id="btnCfg0" aria-pressed="false">1</button><span class="lbl">CONF. 1</span></div>
+          <div class="ctl"><span class="led" id="led1"></span><button type="button" class="pb" id="btnCfg1" aria-pressed="false">2</button><span class="lbl">CONF. 2</span></div>
+          <div class="ctl"><span class="led" id="led2"></span><button type="button" class="pb" id="btnCfg2" aria-pressed="false">3</button><span class="lbl">CONF. 3</span></div>
+        </div>
+        <div class="ctl-group">
+          <div class="ctl"><span class="led-spacer"></span><button type="button" class="pb pb-start" id="btnStart">START</button><span class="lbl">&nbsp;</span></div>
+          <div class="ctl"><span class="led led-alarm" id="ledAlarm"></span><button type="button" class="pb pb-scram" id="btnScram">SCRAM</button><span class="lbl">ALARM</span></div>
+        </div>
+        <div class="ctl-group knob-group" role="group" aria-label="Rod knob">
+          <button type="button" class="pb pb-small" id="btnDown" aria-label="Rod target down one step">−</button>
+          <div class="ctl">
+            <div class="knob" id="knob" tabindex="0" role="slider" aria-label="Rod target" aria-valuemin="0" aria-valuemax="1" aria-valuenow="0" aria-valuetext="0.000">
+              <div class="knob-cap" id="knobCap"><span class="knob-mark"></span></div>
+            </div>
+            <button type="button" class="steptoggle" id="btnStep" aria-label="Switch between fine and coarse knob steps">FINE · 0.005</button>
+          </div>
+          <button type="button" class="pb pb-small" id="btnUp" aria-label="Rod target up one step">+</button>
+        </div>
+      </div>
+      <p class="msg" id="msg" role="status" aria-live="polite">Drag or scroll the knob, or use the arrow keys. The knob is inactive until START.</p>
+    </section>
+
+    <aside class="side">
+      <section class="card" aria-labelledby="hSettings">
+        <h2 id="hSettings">Settings</h2>
+        <div class="seg" role="group" aria-label="Screen view">
+          <button type="button" id="viewBtnNumbers" data-view="numbers" aria-pressed="true">Numbers</button>
+          <button type="button" id="viewBtnGraph" data-view="graph" aria-pressed="false">Graph</button>
+          <button type="button" id="viewBtnInstructor" data-view="instructor" aria-pressed="false">Instructor</button>
+        </div>
+        <div class="form">
+          <label for="setAccel">Time scale</label>
+          <select id="setAccel"><option value="1">x1 (real time)</option><option value="2">x2</option><option value="5">x5</option><option value="10">x10</option></select>
+          <label for="setSound">Sound</label>
+          <select id="setSound"><option value="0">Off</option><option value="1">Alarm only</option><option value="2">Clicks and alarm</option></select>
+          <label for="setNoise">Counting noise</label>
+          <select id="setNoise"><option value="1">On</option><option value="0">Off</option></select>
+          <label for="setPreset">Preset</label>
+          <select id="setPreset"><option value="0">INSO 2026</option><option value="1">Linear detector</option><option value="2">Seeded</option></select>
+          <label for="setSeed">Seed</label>
+          <input id="setSeed" type="number" min="0" max="9999" step="1" value="1234" inputmode="numeric">
+          <label for="setLog">Log</label>
+          <select id="setLog"><option value="0">Off</option><option value="1">Readings</option><option value="2">Readings with hidden values</option></select>
+        </div>
+        <div class="lockrow">
+          <div>
+            <strong id="lockState">Exam lock is off</strong>
+            <p id="lockHelp">Locks the trainer to the numbers view, real time, noise on and no hidden values.</p>
+          </div>
+          <button type="button" class="btn" id="btnLock">Turn on</button>
+        </div>
+      </section>
+
+      <section class="card" aria-labelledby="hLog">
+        <div class="card-head">
+          <h2 id="hLog">Reading log</h2>
+          <div class="card-actions">
+            <button type="button" class="btn" id="btnCopy">Copy CSV</button>
+            <button type="button" class="btn" id="btnClear">Clear</button>
+          </div>
+        </div>
+        <pre class="log" id="log" tabindex="0" aria-label="One line per one-second reading"></pre>
+      </section>
+
+      <section class="card keys" aria-labelledby="hKeys">
+        <h2 id="hKeys">Keyboard</h2>
+        <dl>
+          <div><dt><kbd>1</kbd> <kbd>2</kbd> <kbd>3</kbd></dt><dd>Select configuration</dd></div>
+          <div><dt><kbd>S</kbd></dt><dd>START</dd></div>
+          <div><dt><kbd>X</kbd> or <kbd>Esc</kbd></dt><dd>SCRAM</dd></div>
+          <div><dt><kbd>↑</kbd> <kbd>↓</kbd></dt><dd>Rod target one step</dd></div>
+          <div><dt><kbd>F</kbd></dt><dd>Fine or coarse steps</dd></div>
+          <div><dt><kbd>V</kbd></dt><dd>Next view</dd></div>
+        </dl>
+      </section>
+    </aside>
+  </div>
+</main>
+<script src="core.js"></script>
+<script src="app.js"></script>
+</body>
+</html>
